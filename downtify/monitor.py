@@ -17,7 +17,7 @@ from . import deezer, m3u, providers, spotify
 from .artist_release_store import ArtistReleaseStore
 from .cover_cache import CoverArtCache
 from .download_policy import DownloadPolicy, DownloadPolicyBlocked
-from .download_queue import queue_pause
+from .download_queue import download_slot, queue_pause
 from .downloader import (
     DOWNLOAD_EXECUTOR,
     Downloader,
@@ -1234,7 +1234,7 @@ async def _fetch_watch_track(
 
     observed: dict[str, Any] = {}
     progress = _progress_cb(song, playlist.name, broadcast, loop, observed)
-    async with queue_pause.running():
+    async with download_slot(), queue_pause.running():
         filename = await loop.run_in_executor(
             DOWNLOAD_EXECUTOR,
             lambda: downloader.download(song, progress, subdir=subdir),
@@ -1658,7 +1658,7 @@ async def check_artist(
             await queue_pause.wait()
             try:
                 observed: dict[str, Any] = {}
-                async with queue_pause.running():
+                async with download_slot(), queue_pause.running():
                     filename = await loop.run_in_executor(
                         DOWNLOAD_EXECUTOR,
                         lambda s=song, progress_state=observed: (

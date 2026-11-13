@@ -157,8 +157,8 @@ MAX_PARALLEL_DOWNLOADS = 30
 # "Parallel downloads" below the chosen value and left every
 # `asyncio.to_thread()` call (M3U writes, Monitor DB queries, playlist
 # fetches) queued behind in-flight downloads. Idle threads are cheap; the
-# download semaphore still bounds how many actually run. The extra room
-# covers Playlist Monitor sweeps, which download outside that semaphore.
+# download semaphore still bounds how many actually run - Playlist Monitor
+# sweeps take their slot from it too (download_queue.download_slot).
 DOWNLOAD_EXECUTOR = ThreadPoolExecutor(
     max_workers=MAX_PARALLEL_DOWNLOADS + 8,
     thread_name_prefix='downtify-download',

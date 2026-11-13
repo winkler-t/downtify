@@ -459,7 +459,12 @@ from .discover import (
     spotify_collections,
 )
 from .download_log import OUTCOME_COMPLETED, OUTCOME_SKIPPED, DownloadLog
-from .download_queue import PendingDownload, PendingDownloads, queue_pause
+from .download_queue import (
+    PendingDownload,
+    PendingDownloads,
+    queue_pause,
+    set_download_slot_source,
+)
 from .downloader import (
     AUDIO_PROVIDERS,
     DOWNLOAD_EXECUTOR,
@@ -1280,6 +1285,10 @@ class AppState:
 
 
 state = AppState()
+
+# Playlist Monitor sweeps take their "Parallel downloads" slot from the
+# same semaphore as the queue (see download_queue.download_slot).
+set_download_slot_source(lambda: state.download_semaphore)
 
 
 async def library_only_guard(

@@ -117,6 +117,43 @@ class QueuePause:
 queue_pause = QueuePause()
 
 
+# ── "Parallel downloads" slots shared by the queue and the Monitor ──────────
+
+#: Returns the semaphore that currently bounds parallel downloads (the
+#: API swaps it when "Parallel downloads" changes), or ``None`` when no
+#: limit is set. Installed by the API at import time.
+_slot_source: Optional[Callable[[], Optional[asyncio.Semaphore]]] = None
+
+
+def set_download_slot_source(
+    source: Optional[Callable[[], Optional[asyncio.Semaphore]]],
+) -> None:
+    """Tell :func:`download_slot` where the current limit lives."""
+
+    global _slot_source  # noqa: PLW0603
+    _slot_source = source
+
+
+@contextlib.asynccontextmanager
+async def download_slot() -> AsyncIterator[None]:
+    """Hold one "Parallel downloads" slot for as long as the block lasts.
+
+    The download queue takes its slot from the same semaphore, so
+    Playlist Monitor sweeps (including the first check of a new watch,
+    which runs as its own background task) share the user's limit with
+    the queue instead of downloading on top of it. Without a limit this
+    is a no-op. The semaphore is looked up when the slot is taken, so a
+    changed setting applies to the next download.
+    """
+
+    sem = _slot_source() if _slot_source is not None else None
+    if sem is None:
+        yield
+        return
+    async with sem:
+        yield
+
+
 @dataclass
 class PendingDownload:
     """One saved job: what ``_run_download`` needs to run it again."""
